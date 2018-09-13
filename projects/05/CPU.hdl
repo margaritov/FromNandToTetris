@@ -41,26 +41,18 @@ CHIP CPU {
     PARTS:
     ALU(x=regDout, y=aluMuxOut, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], out=outM, out=regDin, out=AluToMux1, zr=isZero, ng=isNeg);//, zr=, ng=);
 	PC(in=regiserAout, load=loadPC , inc=incPC , reset=reset, out[0..14]=pc); //TODO fix false !!!
+		
+	Or8Way(in[0]=jmp, in[1]=jeq, in[2]=jlt, in[3]=jne, in[4]=jle, in[5]=jgt, in[6]=jge, in[7]=false, out=jmpIns); // instruction contains jump condition
+	And(a=instruction[15], b=jmpIns, out=validJump); //is C instruciton
+	DMux(in=true, sel=validJump, a=incPC, b=loadPC);
 
-	
-	And(a=instruction[15], b=noJump, out=insCnoJump);//no jump
-	Or(a=insCnoJump, b=notInstructionMsb, out=incPC);
-	
-	Or(a=jmp, b=jeq, out=JmpJeq);
-	Or(a=jlt, b=JmpJeq, out=JmpJeqJlt);
-	Or(a=jne, b=JmpJeqJlt, out=JmpJeqJltJne);
-	Or(a=jle, b=JmpJeqJltJne, out=JmpJeqJltJneJle);
-	Or(a=jgt, b= JmpJeqJltJneJle, out=JmpJeqJltJneJleJgt);
-	Or(a=jge, b= JmpJeqJltJneJleJgt, out=JmpJeqJltJneJleJgtJge);
-	And(a=instruction[15], b=JmpJeqJltJneJleJgtJge, out=loadPC);
-	Not(in=JmpJeqJltJneJleJgtJge, out=noJump);
-	
 	Not(in=instruction[0], out=notins0);
 	Not(in=instruction[1], out=notins1);
 	Not(in=instruction[2], out=notins2);
 	Not(in=isZero, out=notisZero);
 	Not(in=isNeg, out=notisNeg);
-
+    Not(in=instruction[15], out=notInstructionMsb);
+	
 	And(a=notisNeg, b=notisZero, out=isGT); //is GT (r>0)
 	And(a=notisZero, b=isNeg, out=isLT); //is LT (r<0)	
 	And(a=isZero, b=notisNeg, out=eqZero); //equals zero
@@ -100,20 +92,15 @@ CHIP CPU {
 	Or(a=isNeg, b=isZero, out=isNegOrZero);
 	And(a=isJle, b=isNegOrZero, out=jle);
 	
-	Not(in=instruction[15], out=notInstructionMsb);
-	
 	Mux16(a=instruction, b=AluToMux1, sel=ins15and5, out=regAin); //registerA MUX
-	
 	Mux16(a=regiserAout, b=inM, sel=ins15and12, out=aluMuxOut);  //AluMux
 
 	And(a=instruction[15], b=instruction[12], out=ins15and12); //bit 12 && 15 -> bit "a" - A/M -> x(alu)
-	And(a=instruction[15], b=instruction[5], out=ins15and5); //bit 5 && 15 -> update A register
-	And(a=instruction[15], b=instruction[4], out=regDload);  //bit 4 && 15 -> update D register
-	And(a=instruction[15], b=instruction[3], out=writeM); // //bit 3 && 15 -> update M(RAM[A]) register
+	And(a=instruction[15], b=instruction[5],  out=ins15and5); //bit 5 && 15 -> update A register
+	And(a=instruction[15], b=instruction[4],  out=regDload);  //bit 4 && 15 -> update D register
+	And(a=instruction[15], b=instruction[3],  out=writeM); // //bit 3 && 15 -> update M(RAM[A]) register
 	
 	Or(a=notInstructionMsb, b=ins15and5, out=regAload);
-	
-	Register(in=regAin, load=regAload, out=regiserAout, out[0..14]=addressM); //A register
-	
-	Register(in=regDin, load=regDload, out=regDout); //D register
+	ARegister(in=regAin, load=regAload, out=regiserAout, out[0..14]=addressM); //A register
+	DRegister(in=regDin, load=regDload, out=regDout); //D register
 }

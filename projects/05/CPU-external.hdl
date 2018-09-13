@@ -41,25 +41,19 @@ CHIP CPU {
     PARTS:
     ALU(x=regDout, y=aluMuxOut, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], out=outM, out=regDin, out=AluToMux1, zr=isZero, ng=isNeg);//, zr=, ng=);
 	PC(in=regiserAout, load=loadPC , inc=incPC , reset=reset, out[0..14]=pc); //TODO fix false !!!
+		
+	Or8Way(in[0]=jmp, in[1]=jeq, in[2]=jlt, in[3]=jne, in[4]=jle, in[5]=jgt, in[6]=jge, in[7]=false, out=jmpIns); // instruction contains jump condition
+	And(a=instruction[15], b=jmpIns, out=validJump); //is C instruciton
+	DMux(in=true, sel=validJump, a=incPC, b=loadPC);
 
-	Not(in=ins0and1and2, out=Notins0and1and2);
-	And(a=instruction[15], b=Notins0and1and2, out=ins15and0and1and2);//no jump
-	Or(a=ins15and0and1and2, b=notInstructionMsb, out=incPC);
-	
-	Or(a=jmp, b=jeq, out=JmpOrJeq);
-	Or(a=JmpOrJeq, b=jlt, out=JmpOrJeqOrJlt);
-	Or(a=jne, b=JmpOrJeqOrJlt, out=JmpOrJeqOrJltorJne);
-	Or(a=jle, b=JmpOrJeqOrJltorJne, out=JmpOrJeqOrJltorJneOrJle);
-	And(a=instruction[15], b=JmpOrJeqOrJltorJneOrJle, out=loadPC);
-	
-	
-	
+	Not16(in=instruction, out=notins);
 	Not(in=instruction[0], out=notins0);
 	Not(in=instruction[1], out=notins1);
 	Not(in=instruction[2], out=notins2);
 	Not(in=isZero, out=notisZero);
 	Not(in=isNeg, out=notisNeg);
-
+    Not(in=instruction[15], out=notInstructionMsb);
+	
 	And(a=notisNeg, b=notisZero, out=isGT); //is GT (r>0)
 	And(a=notisZero, b=isNeg, out=isLT); //is LT (r<0)	
 	And(a=isZero, b=notisNeg, out=eqZero); //equals zero
@@ -79,27 +73,25 @@ CHIP CPU {
 	And(a=isZero, b=isJeq, out=jeq);
 	
 	//jge i2=0, i1=1, i0=1, isneg=0
-	And(a=instruction[0], b=instruction[1], out=ins01);
+	//And(a=instruction[0], b=instruction[1], out=ins01);
 	And(a=notins2, b=ins01, out=isJge);
 	And(a=notisNeg, b= isJge, out=jge);	
 	
-	//jlt -  i2=1 i1=0 ins2=0 isneg=1
+	//jlt i2=1 i1=0 ins2=0 isneg=1
 	And(a=notins0, b=notins1, out=notins01);
 	And(a=notins01, b=instruction[2], out=isJlt);
 	And(a=isLT, b=isJlt, out=jlt);
 	
-	//jne - i2=1 i1=0 i0=1 isZero=0
+	//jne i2=1 i1=0 i0=1 isZero=0
 	And(a=instruction[0], b=instruction[2], out=ins02);
 	And(a=ins02, b=notins1, out=isJne);
 	And(a=notisZero, b=isJne, out=jne);
 	
-	//jle ins2=1, in1=1, ins0=0, isneg=1
+	//jle i2=1, i1=1, i0=0, isneg=1
 	And(a=instruction[2], b=instruction[1], out=ins21);
 	And(a=notins0, b=ins21, out=isJle);
 	Or(a=isNeg, b=isZero, out=isNegOrZero);
 	And(a=isJle, b=isNegOrZero, out=jle);
-	
-	Not(in=instruction[15], out=notInstructionMsb);
 	
 	Mux16(a=instruction, b=AluToMux1, sel=ins15and5, out=regAin); //registerA MUX
 	

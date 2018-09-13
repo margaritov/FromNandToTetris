@@ -27,5 +27,13 @@ CHIP Memory {
     OUT out[16];
 
     PARTS:
-    // Put your code here:
+	// if load is asserted, address[14] refers mjl which chip to write
+	Not(in=address[14], out=notadr14);
+	And(a=address[14], b=load, out=loadScreen);
+	And(a=notadr14, b=load, out=loadRam);
+	
+	RAM16K(in=in, load=loadRam, address=address[0..13], out=ramOut);
+	Keyboard(out=kbdOut); //16bit keyscan code
+	Screen(in=in, load=loadScreen, address=address[0..12], out=screenOut);
+	Mux4Way16(a=ramOut, b=ramOut, c=screenOut, d=kbdOut, sel[1]=address[14],sel[0]=address[13], out=out);
 }
